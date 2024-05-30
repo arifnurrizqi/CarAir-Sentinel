@@ -5,7 +5,7 @@
 //Definitions
 #define placa "ESP-32" // Wemos ESP-32 or other board, whatever have ESP32 
 #define Voltage_Resolution 3.3 // 3V3 <- IMPORTANT. Source: https://randomnerdtutorials.com/esp32-adc-analog-read-arduino-ide/
-#define pin 35 //Analog input 0 of your arduino
+#define pin 34 //Analog input 0 of your arduino
 #define type "MQ-135" //MQ135
 #define ADC_Bit_Resolution 12 // For arduino UNO/MEGA/NANO
 #define RatioMQ135CleanAir 3.6 //RS / R0 = 3.6 ppm  
