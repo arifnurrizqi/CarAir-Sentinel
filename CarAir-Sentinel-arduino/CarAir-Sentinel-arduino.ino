@@ -1,42 +1,54 @@
-//Include the library
+// Include the library
 #include <WiFi.h>
 #include <MQUnifiedsensor.h>
 
-//Definitions
-#define placa "ESP-32" // Wemos ESP-32 or other board, whatever have ESP32 
+// MQ-135 Configuration
+#define CHIP "ESP-32" // Wemos ESP-32 or other board, whatever have ESP32 
 #define Voltage_Resolution 3.3 // 3V3 <- IMPORTANT. Source: https://randomnerdtutorials.com/esp32-adc-analog-read-arduino-ide/
-#define pin 34 //Analog input 0 of your arduino
-#define type "MQ-135" //MQ135
-#define ADC_Bit_Resolution 12 // For arduino UNO/MEGA/NANO
+#define TYPE "MQ-135" //MQ135
+#define ADC_Bit_Resolution 12 // For arduino ESP32
 #define RatioMQ135CleanAir 3.6 //RS / R0 = 3.6 ppm  
 //#define calibration_button 13 //Pin to calibrate your sensor
 
-//Declare Sensor
-MQUnifiedsensor MQ135(placa, Voltage_Resolution, ADC_Bit_Resolution, pin, type);
+// Pinout Configuration
+#define SENSOR_PIN 35 // Analog input ESP32
+#define BUZZER_PIN 16 // Pin for buzzer
+#define RED_PIN 17    // Pin LED RED RGB Module
+#define GREEN_PIN 18  // Pin LED GREEN RGB Module
+#define BLUE_PIN 19   // Pin LED BLUE RGB Module
+#define RELAY_PIN 5   // Pin For Relay Module
 
+//Declare Sensor
+MQUnifiedsensor MQ135(CHIP, Voltage_Resolution, ADC_Bit_Resolution, SENSOR_PIN, TYPE);
+BUZZER_PIN 
 const char* ssid     = "ARNUR";
 const char* password = "tanyamama";
 
 void setup() {
   //Init the serial port communication - to debug the library
   Serial.begin(115200); //Init serial port
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+  pinMode(RELAY_PIN, OUTPUT);
 
   Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
 
-    WiFi.begin(ssid, password);
+  WiFi.begin(ssid, password);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+  }
 
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 
   //Set math model to calculate the PPM concentration and the value of constants
   MQ135.setRegressionMethod(1); //_PPM =  a*ratio^b
@@ -101,4 +113,10 @@ void loop() {
   */
 
   delay(500); //Sampling frequency
+
+  // Decission
+  // Kadar CO < 50 atau CO2 < 1000, LED RGB menyala warna hijau;
+  // Kadar CO > 51 < 200 atau CO2 > 1001 < 2000, LED RGB menyala Berwarna Kuning, Buzzer menyala dgn delay 5000;
+  // Kadar CO > 201 < 400 atau CO2 > 2001 < 2500, LED RGB menyala Berwarna Merah, Buzzer menyala dgn delay 2500;
+  // Kadar CO > 400 atau CO2 > 2500, LED RGB menyala Berwarna Ungu, Buzzer menyala dgn delay 1000, Notif Telegram dan menyalakan relay dengan durasi tertentu;
 }
