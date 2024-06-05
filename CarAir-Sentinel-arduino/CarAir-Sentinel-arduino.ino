@@ -11,8 +11,8 @@
 //#define calibration_button 13 //Pin to calibrate your sensor
 
 // Pinout Configuration
-#define SENSOR_PIN 35 // Analog input ESP32
-#define BUZZER_PIN 16 // Pin for buzzer
+#define SENSOR_PIN 34 // Analog input ESP32
+#define BUZZER_PIN 23 // Pin for buzzer
 #define RED_PIN 17    // Pin LED RED RGB Module
 #define GREEN_PIN 18  // Pin LED GREEN RGB Module
 #define BLUE_PIN 19   // Pin LED BLUE RGB Module
@@ -97,19 +97,17 @@ void loop() {
 
   if ((CO < 50) || (CO2 < 1000)) {
     // Kadar CO < 50 atau CO2 < 1000
-    digitalWrite(GREEN_PIN, HIGH);
-    digitalWrite(RED_PIN, LOW);
-    digitalWrite(BLUE_PIN, LOW);
+    digitalWrite(GREEN_PIN, LOW);
+    digitalWrite(RED_PIN, HIGH);
+    digitalWrite(BLUE_PIN, HIGH);
     digitalWrite(BUZZER_PIN, LOW);
     Serial.println("Status: Aman - LED Hijau Menyala");
   } 
   else if ((CO >= 51 && CO <= 200) || (CO2 >= 1001 && CO2 <= 2000)) {
     // Kadar CO > 51 < 200 atau CO2 > 1001 < 2000
-    digitalWrite(GREEN_PIN, LOW);
     digitalWrite(RED_PIN, LOW);
-    digitalWrite(BLUE_PIN, LOW);
-    digitalWrite(RED_PIN, HIGH);
-    digitalWrite(GREEN_PIN, HIGH);
+    digitalWrite(BLUE_PIN, HIGH);
+    digitalWrite(GREEN_PIN, LOW);
     tone(BUZZER_PIN, 1000); // Buzzer on
     Serial.println("Status: Waspada - LED Kuning Menyala, Buzzer Aktif");
     delay(5000);
@@ -117,9 +115,9 @@ void loop() {
   } 
   else if ((CO >= 201 && CO <= 400) || (CO2 >= 2001 && CO2 <= 2500)) {
     // Kadar CO > 201 < 400 atau CO2 > 2001 < 2500
-    digitalWrite(GREEN_PIN, LOW);
-    digitalWrite(BLUE_PIN, LOW);
-    digitalWrite(RED_PIN, HIGH);
+    digitalWrite(GREEN_PIN, HIGH);
+    digitalWrite(BLUE_PIN, HIGH);
+    digitalWrite(RED_PIN, LOW);
     tone(BUZZER_PIN, 1000); // Buzzer on
     Serial.println("Status: Bahaya - LED Merah Menyala, Buzzer Aktif");
     delay(2500);
@@ -127,10 +125,10 @@ void loop() {
   } 
   else if (CO > 400 || CO2 > 2500) {
     // Kadar CO > 400 atau CO2 > 2500
-    digitalWrite(GREEN_PIN, LOW);
-    digitalWrite(RED_PIN, HIGH);
-    digitalWrite(BLUE_PIN, HIGH);
-    tone(BUZZER_PIN, 1000); // Buzzer on
+    digitalWrite(GREEN_PIN, HIGH);
+    digitalWrite(RED_PIN, LOW);
+    digitalWrite(BLUE_PIN, LOW);
+    tone(BUZZER_PIN, 1000); // Buzzer on 
     Serial.println("Status: Sangat Berbahaya - LED Ungu Menyala, Buzzer Aktif, Relay Aktif");
     delay(1000);
     noTone(BUZZER_PIN); // Buzzer off
