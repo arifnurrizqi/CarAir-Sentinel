@@ -1,11 +1,11 @@
 // Blynk Configuration
-#define BLYNK_TEMPLATE_ID           "TMPL6N6ZN0S9E"
-#define BLYNK_TEMPLATE_NAME         "CAR AIR SENTINEL"
-#define BLYNK_AUTH_TOKEN            "XibW_d_zhJunuX90XhGidobavWs27mIP"
+#define BLYNK_TEMPLATE_ID  "TMPL6N6ZN0S9E"
+#define BLYNK_TEMPLATE_NAME "CAR AIR SENTINEL"
+#define BLYNK_AUTH_TOKEN    "XibW_d_zhJunuX90XhGidobavWs27mIP"
 
 // Include the libraries
-#include <WiFi.h>                  // Library for WiFi ESP32
-#include <WiFiClient.h>            // Library WiFi Client ESP32
+#include <WiFiManager.h>          // https://github.com/tzapu/WiFiManager
+#include <ArduinoJson.h>          // https://github.com/bblanchon/ArduinoJson
 #include <MQUnifiedsensor.h>       // Library for sensor MQ Series 
 #include <BlynkSimpleEsp32.h>      // Library for blynk IoT
 
@@ -27,8 +27,15 @@
 // Declare Sensor
 MQUnifiedsensor MQ135(CHIP, Voltage_Resolution, ADC_Bit_Resolution, SENSOR_PIN, TYPE);
 
-const char* ssid = "ARNUR";
-const char* password = "takonmama";
+char blynkTemplateId[40];
+char blynkTemplateName[40];
+char blynkAuthToken[34];
+
+// Configuration for WiFi-Manager
+WiFiManager wm;
+WiFiManagerParameter custom_blynk_template_id("template_id", "Blynk Template ID", BLYNK_TEMPLATE_ID, 40);
+WiFiManagerParameter custom_blynk_template_name("template_name", "Blynk Template Name", BLYNK_TEMPLATE_NAME, 40);
+WiFiManagerParameter custom_blynk_auth_token("auth_token", "Blynk Auth Token", BLYNK_AUTH_TOKEN, 34);
 
 // Blynk setup
 BlynkTimer timer;
@@ -56,22 +63,33 @@ void setup() {
   pinMode(BLUE_PIN, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
 
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+  wm.addParameter(&custom_blynk_template_id);
+  wm.addParameter(&custom_blynk_template_name);
+  wm.addParameter(&custom_blynk_auth_token);
 
-  WiFi.begin(ssid, password);
+  // Set custom header for the WiFiManager portal
+  wm.setTitle("Car Air Sentinel");
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // AutoConnect and timeout in seconds
+  wm.setConfigPortalTimeout(180);
+
+  if (!wm.autoConnect("CAS config", "1234567890")) {
+    Serial.println("Failed to connect and hit timeout");
+    ESP.restart();
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println("Connected to WiFi!");
+
+  strcpy(blynkTemplateId, custom_blynk_template_id.getValue());
+  strcpy(blynkTemplateName, custom_blynk_template_name.getValue());
+  strcpy(blynkAuthToken, custom_blynk_auth_token.getValue());
+
+  Serial.println("Blynk Template ID: " + String(blynkTemplateId));
+  Serial.println("Blynk Template Name: " + String(blynkTemplateName));
+  Serial.println("Blynk Auth Token: " + String(blynkAuthToken));
+
+  Blynk.config(blynkAuthToken);
+  Blynk.connect();
 
   // Set math model to calculate the PPM concentration and the value of constants
   MQ135.setRegressionMethod(1); // _PPM =  a*ratio^b
@@ -101,9 +119,6 @@ void setup() {
 
   Serial.println("** Values from MQ-135 **");
   Serial.println("|    CO    |    CO2    |");  
-
-  // Initialize Blynk
-  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
 
   // Setup a function to be called every second
   timer.setInterval(1000L, []() {
