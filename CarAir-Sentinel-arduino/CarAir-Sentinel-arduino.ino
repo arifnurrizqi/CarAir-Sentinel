@@ -1,13 +1,14 @@
 // Blynk Configuration
-#define BLYNK_TEMPLATE_ID  "TMPL6N6ZN0S9E"
-#define BLYNK_TEMPLATE_NAME "CAR AIR SENTINEL"
-#define BLYNK_AUTH_TOKEN    "XibW_d_zhJunuX90XhGidobavWs27mIP"
+#define BLYNK_TEMPLATE_ID  "Enter your blynk template id"
+#define BLYNK_TEMPLATE_NAME "Enter your blynk template name"
+#define BLYNK_AUTH_TOKEN    "Enter your blink auth token"
 
 // Include the libraries
 #include <WiFiManager.h>          // https://github.com/tzapu/WiFiManager
 #include <ArduinoJson.h>          // https://github.com/bblanchon/ArduinoJson
 #include <MQUnifiedsensor.h>       // Library for sensor MQ Series 
 #include <BlynkSimpleEsp32.h>      // Library for blynk IoT
+#include <Preferences.h>           // Library for storing preferences
 
 // MQ-135 Configuration
 #define CHIP                  "ESP-32" // Wemos ESP-32 or other board, whatever have ESP32 
@@ -37,6 +38,9 @@ WiFiManagerParameter custom_blynk_template_id("template_id", "Blynk Template ID"
 WiFiManagerParameter custom_blynk_template_name("template_name", "Blynk Template Name", BLYNK_TEMPLATE_NAME, 40);
 WiFiManagerParameter custom_blynk_auth_token("auth_token", "Blynk Auth Token", BLYNK_AUTH_TOKEN, 34);
 
+// Preferences for storing Blynk configuration
+Preferences preferences;
+
 // Blynk setup
 BlynkTimer timer;
 
@@ -63,6 +67,17 @@ void setup() {
   pinMode(BLUE_PIN, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
 
+  preferences.begin("blynk", false);
+
+  // Read saved configuration or default to #define values
+  String defaultBlynkTemplateId = preferences.getString("template_id", BLYNK_TEMPLATE_ID);
+  String defaultBlynkTemplateName = preferences.getString("template_name", BLYNK_TEMPLATE_NAME);
+  String defaultBlynkAuthToken = preferences.getString("auth_token", BLYNK_AUTH_TOKEN);
+
+  strcpy(blynkTemplateId, defaultBlynkTemplateId.c_str());
+  strcpy(blynkTemplateName, defaultBlynkTemplateName.c_str());
+  strcpy(blynkAuthToken, defaultBlynkAuthToken.c_str());
+
   wm.addParameter(&custom_blynk_template_id);
   wm.addParameter(&custom_blynk_template_name);
   wm.addParameter(&custom_blynk_auth_token);
@@ -83,6 +98,13 @@ void setup() {
   strcpy(blynkTemplateId, custom_blynk_template_id.getValue());
   strcpy(blynkTemplateName, custom_blynk_template_name.getValue());
   strcpy(blynkAuthToken, custom_blynk_auth_token.getValue());
+
+  // Save new configuration to preferences
+  preferences.putString("template_id", custom_blynk_template_id.getValue());
+  preferences.putString("template_name", custom_blynk_template_name.getValue());
+  preferences.putString("auth_token", custom_blynk_auth_token.getValue());
+
+  preferences.end();
 
   Serial.println("Blynk Template ID: " + String(blynkTemplateId));
   Serial.println("Blynk Template Name: " + String(blynkTemplateName));
