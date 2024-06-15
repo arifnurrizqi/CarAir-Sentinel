@@ -52,6 +52,7 @@ unsigned long previousMillis = 0;
 unsigned long previousMillisRelay = 0;
 bool relayOn = false;   // Relay Status
 
+
 void setup() {
   // Init the serial port communication - to debug the library
   Serial.begin(115200); // Init serial port
@@ -67,18 +68,27 @@ void setup() {
   wm.addParameter(&custom_blynk_template_name);
   wm.addParameter(&custom_blynk_auth_token);
 
+  // reset settings - wipe stored credentials for testing
+  // these are stored by the esp library
+  // wm.resetSettings();
+
   // Set custom header for the WiFiManager portal
   wm.setTitle("Car Air Sentinel");
 
   // AutoConnect and timeout in seconds
-  wm.setConfigPortalTimeout(180);
+  wm.setConfigPortalTimeout(120);
 
   if (!wm.autoConnect("CAS config", "1234567890")) {
     Serial.println("Failed to connect and hit timeout");
-    ESP.restart();
+    // ESP.restart();
   }
 
-  Serial.println("Connected to WiFi!");
+  // Cek apakah terhubung ke wifi apa tidak
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Operating in offline mode");
+  } else {
+    Serial.println("Connected to WiFi!"); 
+  }
 
   strcpy(blynkTemplateId, custom_blynk_template_id.getValue());
   strcpy(blynkTemplateName, custom_blynk_template_name.getValue());
@@ -110,11 +120,21 @@ void setup() {
   
   if (isinf(calcR0)) {
     Serial.println("Warning: Connection issue, R0 is infinite (Open circuit detected) please check your wiring and supply");
-    while (1);
+    while (true) {
+      digitalWrite(BUZZER_PIN, LOW);
+      delay(200);
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(200);
+    };
   }
   if (calcR0 == 0) {
     Serial.println("Warning: Connection issue found, R0 is zero (Analog pin shorts to ground) please check your wiring and supply");
-    while (1);
+    while (true) {
+      digitalWrite(BUZZER_PIN, LOW);
+      delay(200);
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(200);
+    };
   }
 
   Serial.println("** Values from MQ-135 **");
@@ -122,6 +142,12 @@ void setup() {
 
   // Setup a function to be called every second
   timer.setInterval(1000L, []() {
+    if (analogRead(SENSOR_PIN) == 0) {
+      Serial.println("Warning: Connection issue, R0 is infinite (Open circuit detected) please check your wiring and supply to sensor");
+      digitalWrite(BUZZER_PIN, HIGH); // Buzzer aktif
+      delay(200);
+    }
+
     MQ135.update(); // Update data, the arduino will read the voltage from the analog pin
 
     MQ135.setA(605.18); MQ135.setB(-3.937); // Configure the equation to calculate CO concentration value
@@ -141,9 +167,9 @@ void setup() {
 
     unsigned long currentMillis = millis();
 
-    if ((CO < 50) || (CO2 < 1000)) {
+    if ((CO < 50) && (CO2 < 1000)) {
       // Kadar CO < 50 atau CO2 < 1000
-      digitalWrite(GREEN_PIN, LOW);
+      digitalWrite(GREEN_PIN, LOW); // LED Hijau hidup
       digitalWrite(RED_PIN, HIGH);
       digitalWrite(BLUE_PIN, HIGH);
       digitalWrite(BUZZER_PIN, LOW);
@@ -151,51 +177,72 @@ void setup() {
       Serial.println("Status: Aman - LED Hijau Menyala");
 
       Blynk.logEvent("gas_safe_alarm", "AMAN! Kadar CO atau CO2 RENDAH");
+
+      if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("Operating in offline mode");
+        if (currentMillis - previousMillis >= 1000) {
+          previousMillis = currentMillis;
+    
+          digitalWrite(GREEN_PIN, HIGH); // LED Hijau mati
+          delay(1000);
+
+        }
+      }      
     }
     else if ((CO >= 51 && CO <= 200) || (CO2 >= 1001 && CO2 <= 2000)) {
       // Kadar CO > 51 < 200 atau CO2 > 1001 < 2000
+      digitalWrite(RED_PIN, LOW);
+      digitalWrite(BLUE_PIN, HIGH);
+      digitalWrite(GREEN_PIN, LOW);
+      status = "Waspada";
+      Serial.println("Status: Waspada - LED Kuning Menyala, Buzzer Aktif");
+
+      Blynk.logEvent("gas_alarm", "WASPADA! Kadar CO atau CO2 cukup tinggi");
+
       if (currentMillis - previousMillis >= 5000) {
         previousMillis = currentMillis;
-        digitalWrite(RED_PIN, LOW);
-        digitalWrite(BLUE_PIN, HIGH);
-        digitalWrite(GREEN_PIN, LOW);
-        digitalWrite(BUZZER_PIN, HIGH); // Buzzer on 
-        status = "Waspada";
-        Serial.println("Status: Waspada - LED Kuning Menyala, Buzzer Aktif");
+  
+        digitalWrite(BUZZER_PIN, HIGH); // Buzzer on
+        delay(1000);
 
-        Blynk.logEvent("gas_alarm", "WASPADA! Kadar CO atau CO2 cukup tinggi");
       }
     }
     else if ((CO >= 201 && CO <= 400) || (CO2 >= 2001 && CO2 <= 2500)) {
       // Kadar CO > 201 < 400 atau CO2 > 2001 < 2500
+      digitalWrite(GREEN_PIN, HIGH);
+      digitalWrite(BLUE_PIN, HIGH);
+      digitalWrite(RED_PIN, LOW);
+      status = "Bahaya";
+      Serial.println("Status: Bahaya - LED Merah Menyala, Buzzer Aktif");
+
+      Blynk.logEvent("gas_alarm", "BAHAYA! Kadar CO atau CO2 tinggi");
+
       if (currentMillis - previousMillis >= 2500) {
         previousMillis = currentMillis;
-        digitalWrite(GREEN_PIN, HIGH);
-        digitalWrite(BLUE_PIN, HIGH);
-        digitalWrite(RED_PIN, LOW);
-        digitalWrite(BUZZER_PIN, HIGH); // Buzzer on 
-        status = "Bahaya";
-        Serial.println("Status: Bahaya - LED Merah Menyala, Buzzer Aktif");
 
-        Blynk.logEvent("gas_alarm", "BAHAYA! Kadar CO atau CO2 tinggi");
+        digitalWrite(BUZZER_PIN, HIGH); // Buzzer on
+        delay(1000);
       }
     }
     else if (CO > 400 || CO2 > 2500) {
       // Kadar CO > 400 atau CO2 > 2500
+      digitalWrite(GREEN_PIN, HIGH);
+      digitalWrite(RED_PIN, LOW);
+      digitalWrite(BLUE_PIN, LOW);
+      digitalWrite(BUZZER_PIN, HIGH); // Buzzer on 
+      status = "Sangat Berbahaya";
+      Serial.println("Status: Sangat Berbahaya - LED Ungu Menyala, Buzzer Aktif, Relay Aktif");
+      relayOn = true;
+      relayStatus = 1; // data for blynk
+      previousMillisRelay = currentMillis;
+
+      Blynk.logEvent("gas_alarm", "SANGAT BERBAHAYA! Kadar CO atau CO2 sangat tinggi");
+
       if (currentMillis - previousMillis >= 1000) {
         previousMillis = currentMillis;
-        digitalWrite(GREEN_PIN, HIGH);
-        digitalWrite(RED_PIN, LOW);
-        digitalWrite(BLUE_PIN, LOW);
-        digitalWrite(BUZZER_PIN, HIGH); // Buzzer on 
-        status = "Sangat Berbahaya";
-        Serial.println("Status: Sangat Berbahaya - LED Ungu Menyala, Buzzer Aktif, Relay Aktif");
+        
         digitalWrite(RELAY_PIN, HIGH); // Relay on
-        relayOn = true;
-        relayStatus = 1; // data for blynk
-        previousMillisRelay = currentMillis;
-
-        Blynk.logEvent("gas_alarm", "SANGAT BERBAHAYA! Kadar CO atau CO2 sangat tinggi");
+        delay(1000);
       }
     }
 
@@ -208,6 +255,8 @@ void setup() {
 
     // Send data to Blynk
     sendToBlynk(CO, CO2, status, relayStatus);
+    digitalWrite(BUZZER_PIN, LOW); // Buzzer off
+    delay(500);
   });
 }
 
