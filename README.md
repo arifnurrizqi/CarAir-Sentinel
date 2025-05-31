@@ -16,5 +16,5 @@
 ## Galery
   Coming soon...
 ## Demo Video
-  Coming soon...
+  https://youtu.be/kNzv43Y0niQ
 ## Reference
